@@ -69,13 +69,15 @@ export const createPlayer = mutation({
     name: v.string(),
     worldId: v.id('worlds'),
     characterId: v.id('characters'),
+    money: v.number(),
   },
-  handler: async (ctx, { name, worldId, characterId, ...args }) => {
+  handler: async (ctx, { name, worldId, characterId, money, ...args }) => {
     // Future: associate this with an authed user
     const playerId = await ctx.db.insert('players', {
       name,
       characterId,
       worldId,
+      money,
     });
     await ctx.db.insert('journal', {
       playerId,
@@ -92,13 +94,15 @@ export const createAgent = mutation({
     name: v.string(),
     worldId: v.id('worlds'),
     characterId: v.id('characters'),
+    money: v.number(),
   },
-  handler: async (ctx, { name, worldId, characterId, ...args }) => {
+  handler: async (ctx, { name, worldId, characterId, money, ...args }) => {
     // Future: associate this with an authed user
     const playerId = await ctx.db.insert('players', {
       name,
       characterId,
       worldId,
+      money,
     });
     const agentId = await ctx.db.insert('agents', {
       playerId,

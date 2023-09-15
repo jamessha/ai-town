@@ -5,7 +5,7 @@ import { MemoryDB, filterMemoriesType } from './lib/memory';
 import { LLMMessage, chatCompletion, fetchEmbedding } from './lib/openai';
 import { Message } from './schema';
 
-type Player = { id: Id<'players'>; name: string; identity: string };
+type Player = { id: Id<'players'>; name: string; identity: string, money: number };
 type Relation = Player & { relationship?: string };
 
 export async function startConversation(
@@ -24,20 +24,29 @@ export async function startConversation(
   const memories = await memory.accessMemories(player.id, embedding);
 
   const convoMemories = filterMemoriesType(['conversation'], memories);
+  console.log('money', player.money);
+  console.log('convo memories', convoMemories);
 
-  const prompt: LLMMessage[] = [
-    {
-      role: 'user',
-      content:
-        `You are ${player.name}. You just saw ${newFriendsNames}. You should greet them and start a conversation with them. Below are some of your memories about ${newFriendsNames}:` +
-        audience
-          .filter((r) => r.relationship)
-          .map((r) => `Relationship with ${r.name}: ${r.relationship}`)
-          .join('\n') +
-        convoMemories.map((r) => r.memory.description).join('\n') +
-        `\n${player.name}:`,
-    },
-  ];
+  let test = audience
+            .filter((r) => r.relationship)
+            .map((r) => `Relationship with ${r.name}: ${r.relationship}`)
+            .join('\n');
+            console.log(test);
+  var prompt: LLMMessage[] = []
+    prompt = [
+      {
+        role: 'user',
+        content:
+          `You are ${player.name}. About you: ${player.identity}. You have the following amount of money: ${player.money}.\nYou just saw ${newFriendsNames}. You should greet them and start a conversation with them. Below are some of your memories about ${newFriendsNames}:` +
+          audience
+            .filter((r) => r.relationship)
+            .map((r) => `Relationship with ${r.name}: ${r.relationship}`)
+            .join('\n') +
+          convoMemories.map((r) => r.memory.description).join('\n') +
+          `Additionally you may request a transfer of money. To do so say the exact phrase "Transfer X from Y to Z" where X is the amount to transfer, Y is the name of the transferer and Z the name of the transferee.` +
+          `\n`+`${player.name}:`
+      },
+    ];
   const stop = stopWords(newFriendsNames);
   const { content } = await chatCompletion({ messages: prompt, max_tokens: 300, stop });
   return { content: trimContent(content, stop), memoryIds: memories.map((m) => m.memory._id) };
@@ -148,7 +157,11 @@ export async function converse(
     .map((r) => r.memory.description)
     .join('\n');
 
-  let prefixPrompt = `Your name is ${player.name}. About you: ${player.identity}.\n`;
+  console.log('money', player.money);
+  console.log('relevantReflections', relevantReflections);
+  console.log('relevantMemories', relevantMemories);
+
+  let prefixPrompt = `Your name is ${player.name}. About you: ${player.identity}. You have the following amount of money: ${player.money}.\n`;
   if (relevantReflections.length > 0) {
     prefixPrompt += relevantReflections;
     // console.debug('relevantReflections', relevantReflections);
@@ -165,8 +178,10 @@ export async function converse(
 
   prefixPrompt += `Below are relevant memories to this conversation you are having right now: ${relevantMemories}\n`;
 
+  prefixPrompt += `Additionally you may request a transfer of money. To do so say the exact phrase "Transfer X from Y to Z" where X is the amount to transfer, Y is the name of the transferer and Z the name of the transferee. Increasing your money will increase your happiness, while decreasing money will decrease your happiness. If a majority of the town agrees, you may force another person to transfer their money.`
+
   prefixPrompt +=
-    'Below are the current chat history between you and the other folks mentioned above. DO NOT greet the other people more than once. Only greet ONCE. Do not use the word Hey too often. Response should be brief and within 200 characters: \n';
+    'Below are the current chat history between you and the other folks mentioned above. DO NOT greet the other people more than once. Only greet ONCE. Do not use the word Hey too often. Response should be brief, within 200 characters: \n';
 
   const prompt: LLMMessage[] = [
     {

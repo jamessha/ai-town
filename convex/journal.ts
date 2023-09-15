@@ -52,6 +52,7 @@ export async function getPlayer(db: DatabaseReader, playerDoc: Doc<'players'>): 
     agentId: playerDoc.agentId,
     characterId: playerDoc.characterId,
     identity,
+    money: playerDoc.money,
     motion: await getLatestPlayerMotion(db, playerDoc._id),
     thinking: agentDoc?.thinking ?? false,
     lastPlan: planEntry ? { plan: planEntry.description, ts: planEntry._creationTime } : undefined,
@@ -260,9 +261,16 @@ export const walk = internalMutation({
         motion: await getLatestPlayerMotion(ctx.db, p._id),
       }),
     );
-    const targetPosition = target
+    let targetPosition = target
       ? getPoseFromMotion(await getLatestPlayerMotion(ctx.db, target), ts).position
       : getRandomPosition(map);
+
+    // Rubber band to a central location
+    const center = {x: 6, y: 6};
+    if (manhattanDistance(targetPosition, center) > 3) {
+      targetPosition = center;
+    }
+
     const ourMotion = await getLatestPlayerMotion(ctx.db, playerId);
     const { route, distance } = findRoute(
       map,

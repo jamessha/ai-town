@@ -92,6 +92,7 @@ export const Player = v.object({
   agentId: v.optional(v.id('agents')),
   characterId: v.id('characters'),
   identity: v.string(),
+  money: v.number(),
   motion: Motion,
   thinking: v.boolean(),
   lastPlan: v.optional(v.object({ plan: v.string(), ts: v.number() })),
@@ -252,6 +253,7 @@ export default defineSchema(
       // For NPCs, this is set to the agent's state.
       agentId: v.optional(v.id('agents')),
       characterId: v.id('characters'),
+      money: v.number(),
     }).index('by_worldId', ['worldId']),
     // For tracking the engine's processing of agents
     agents: defineTable({
